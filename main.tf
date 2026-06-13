@@ -162,11 +162,14 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
           "s3:GetObject",
           "s3:GetObjectVersion",
           "s3:GetBucketVersioning",
-          "s3:PutObject"
+          "s3:PutObject",
+          "s3:PutObjectAcl"
         ]
         Resource = [
           aws_s3_bucket.pipeline_artifacts.arn,
-          "${aws_s3_bucket.pipeline_artifacts.arn}/*"
+          "${aws_s3_bucket.pipeline_artifacts.arn}/*",
+          aws_s3_bucket.web_hosting.arn,          # Allows listing the hosting bucket
+          "${aws_s3_bucket.web_hosting.arn}/*"
         ]
       },
       {
@@ -189,6 +192,55 @@ resource "aws_iam_role_policy" "codepipeline_policy" {
 }
 
 # 6. CodePipeline Orchestration
+# resource "aws_codepipeline" "pipeline" {
+#   name     = "static-website-pipeline"
+#   role_arn = aws_iam_role.codepipeline_role.arn
+
+#   artifact_store {
+#     location = aws_s3_bucket.pipeline_artifacts.id
+#     type     = "S3"
+#   }
+
+#   stage {
+#     name = "Source"
+
+#     action {
+#       name             = "GitHub_Source"
+#       category         = "Source"
+#       owner            = "ThirdParty"
+#       provider         = "GitHub"
+#       version          = "1"
+#       output_artifacts = ["source_output"]
+
+#       configuration = {
+#         Owner      = "hassanjavaid07" 
+#         Repo       = "aws-static-site-pipeline"      
+#         Branch     = "main"
+#         OAuthToken = var.github_token
+#       }
+#     }
+#   }
+
+#   stage {
+#     name = "Deploy"
+
+#     action {
+#       name             = "Build_And_Deploy"
+#       category         = "Build"
+#       owner            = "AWS"
+#       provider         = "CodeBuild"
+#       input_artifacts  = ["source_output"]
+#       output_artifacts = ["deploy_output"]
+#       version          = "1"
+
+#       configuration = {
+#         ProjectName = aws_codebuild_project.site_build.name
+#       }
+#     }
+#   }
+# }
+
+# 6. CodePipeline Orchestration (Bypassing CodeBuild)
 resource "aws_codepipeline" "pipeline" {
   name     = "static-website-pipeline"
   role_arn = aws_iam_role.codepipeline_role.arn
@@ -210,28 +262,29 @@ resource "aws_codepipeline" "pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        Owner      = "hassanjavaid07" 
-        Repo       = "aws-static-site-pipeline"      
+        Owner      = "hassanjavaid07"
+        Repo       = "aws-static-site-pipeline"
         Branch     = "main"
         OAuthToken = var.github_token
       }
     }
   }
 
+  # Replace the old "Deploy" stage with this native S3 deployment block
   stage {
     name = "Deploy"
 
     action {
-      name             = "Build_And_Deploy"
-      category         = "Build"
-      owner            = "AWS"
-      provider         = "CodeBuild"
-      input_artifacts  = ["source_output"]
-      output_artifacts = ["deploy_output"]
-      version          = "1"
+      name            = "S3_Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "S3" # Uses native S3 integration instead of CodeBuild
+      input_artifacts = ["source_output"]
+      version         = "1"
 
       configuration = {
-        ProjectName = aws_codebuild_project.site_build.name
+        BucketName = aws_s3_bucket.web_hosting.id
+        Extract    = "true" # This extracts the zip file from GitHub straight into S3
       }
     }
   }
