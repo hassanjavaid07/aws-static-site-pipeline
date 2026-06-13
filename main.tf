@@ -2,6 +2,14 @@ provider "aws" {
   region = "us-east-1"
 }
 
+# 1. Declare the variable at the top
+variable "github_token" {
+  type        = string
+  description = "Secure token for GitHub authentication"
+  sensitive   = true # This hides the token from printing in your terminal logs
+}
+
+
 # 1. S3 Bucket for Static Website Hosting
 resource "aws_s3_bucket" "web_hosting" {
   bucket        = "my-unique-devops-hosting-bucket-2026" # Change to a globally unique name
@@ -202,10 +210,10 @@ resource "aws_codepipeline" "pipeline" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        Owner      = "YOUR_GITHUB_USERNAME" # Change this
-        Repo       = "YOUR_REPO_NAME"        # Change this
+        Owner      = "hassanjavaid07" 
+        Repo       = "aws-static-site-pipeline"      
         Branch     = "main"
-        OAuthToken = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN" # Better managed via variables, plaintext used here for structural clarity
+        OAuthToken = var.github_token
       }
     }
   }
