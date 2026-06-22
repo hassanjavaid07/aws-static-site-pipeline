@@ -6,7 +6,7 @@ provider "aws" {
 variable "github_token" {
   type        = string
   description = "Secure token for GitHub authentication"
-  sensitive   = true # This hides the token from printing in your terminal logs
+  sensitive   = true 
 }
 
 

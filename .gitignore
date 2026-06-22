@@ -13,3 +13,6 @@ crash.log
 terraform.rc
 
 *.csv
+
+# Block local secret variable inputs
+terraform.tfvars
